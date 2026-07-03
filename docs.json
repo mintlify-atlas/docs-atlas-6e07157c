@@ -1,72 +1,71 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "name": "SharedKernel",
+  "theme": "luma",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#044c84"
   },
-  "favicon": "/favicon.svg",
-  "navigation": {
-    "pages": [
-      {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
-        ]
-      }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
+  "favicon": "https://media.brand.dev/6431ecc0-4bf6-4385-aa6b-510768228ba5.png",
   "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
     "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
+      "type": "github",
+      "href": "https://github.com/jordiaragonzaragoza/JordiAragonZaragoza.SharedKernel"
     }
-  },
-  "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
-    ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/jordiaragonzaragoza/JordiAragonZaragoza.SharedKernel"
     }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "packages"
+            ]
+          },
+          {
+            "group": "Domain Layer",
+            "pages": [
+              "domain/entities",
+              "domain/value-objects",
+              "domain/domain-events",
+              "domain/business-rules",
+              "domain/enums"
+            ]
+          },
+          {
+            "group": "Application Layer",
+            "pages": [
+              "application/cqrs",
+              "application/pipelines",
+              "application/integration-events"
+            ]
+          },
+          {
+            "group": "Infrastructure Layer",
+            "pages": [
+              "infrastructure/dependency-injection",
+              "infrastructure/entity-framework",
+              "infrastructure/event-store",
+              "infrastructure/caching"
+            ]
+          },
+          {
+            "group": "Presentation Layer",
+            "pages": [
+              "presentation/http-restful-api",
+              "presentation/integration-bus"
+            ]
+          }
+        ]
+      }
+    ]
   }
 }
