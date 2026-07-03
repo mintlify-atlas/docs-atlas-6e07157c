@@ -1,7 +1,7 @@
 ---
-title: "REST API Presentation Helpers in SharedKernel"
+title: "HTTP RESTful API Presentation Layer — SharedKernel"
 sidebarTitle: "HTTP REST API"
-description: "Build ASP.NET Core HTTP APIs faster with BaseApiCommandController, BaseApiQueryController, ExceptionMiddleware, ResponseBuilder, and user/partition context middlewares."
+description: "Build ASP.NET Core HTTP APIs with BaseApiCommandController, BaseApiQueryController, ExceptionMiddleware, and user/partition context middlewares."
 ---
 
 The `JordiAragonZaragoza.SharedKernel.Presentation.HttpRestfulApi` package provides a set of ASP.NET Core building blocks that sit between your application layer and the HTTP transport. It ships abstract base controllers wired to the `ICommandBus` and `IQueryBus`, middleware for global exception handling, user identity propagation, and multi-tenant partition context extraction, plus rich result-to-HTTP-response mapping helpers based on `Ardalis.Result`. A companion Contracts package supplies shared request/response types and typed `HttpClient` extension methods that consuming services can reference without taking a dependency on the full implementation package.
@@ -211,7 +211,7 @@ app.UseMiddleware<ExceptionMiddleware>();
 
 ### `UserContextMiddleware`
 
-Reads the `UserId` header from the incoming HTTP request and populates `IUserContextService` for use anywhere downstream (application layer, domain services, etc.).
+Reads the `KeyUserCorrelationId` HTTP request header (referenced via `UserConstants.UserId`) and populates `IUserContextService` for use anywhere downstream (application layer, domain services, etc.).
 
 ```csharp
 public sealed class UserContextMiddleware
@@ -258,7 +258,7 @@ app.UseMiddleware<UserContextMiddleware>();
 ```
 
 <Note>
-  Anonymous access to `/swagger`, `/health`, and `/metrics` paths is automatically allowed by `AnonymousRequestHelper.IsAnonymousAllowed`. For all other paths, the header is required or the middleware returns `400 Bad Request`.
+  Anonymous access to `/swagger`, `/health`, and `/metrics` paths is automatically allowed by `AnonymousRequestHelper.IsAnonymousAllowed`. For all other paths, the `KeyUserCorrelationId` header is required or the middleware returns `400 Bad Request`.
 </Note>
 
 ---
@@ -342,7 +342,7 @@ public static class AnonymousRequestHelper
 ```
 
 <Tip>
-  Override this logic in your own middleware pipeline if you need different anonymous-access rules — for example, to allow unauthenticated access to an `api/v1/auth/login` endpoint.
+  To apply different anonymous-access rules in your application — for example, to allow unauthenticated access to an `api/v1/auth/login` endpoint — extend the conditions inside `IsAnonymousAllowed` or add your own middleware that runs before `UserContextMiddleware` and `PartitionContextMiddleware`.
 </Tip>
 
 ---
@@ -405,14 +405,14 @@ public static object BuildResponse(
     int statusCode)
 ```
 
-The helper selects the response shape based on `statusCode`:
+The helper selects the response shape based on `statusCode`. The switch explicitly matches `422`, `404`, and `409`; all other codes fall through to the default branch which returns `ValidationProblemDetails`:
 
 | Status Code | Response Type             | RFC Reference                                  |
 |-------------|--------------------------|------------------------------------------------|
-| `400`       | `ValidationProblemDetails` | RFC 7231 §6.5.1                              |
+| `422`       | `ProblemDetails`          | RFC 9110 §422                                 |
 | `404`       | `ProblemDetails`          | RFC 7231 §6.5.4                               |
 | `409`       | `ProblemDetails`          | RFC 9110 §409                                 |
-| `422`       | `ProblemDetails`          | RFC 9110 §422                                 |
+| any other   | `ValidationProblemDetails` | RFC 7231 §6.5.1                              |
 
 ```csharp
 // Example: manually build a 422 response from FluentValidation failures

@@ -1,7 +1,7 @@
 ---
 title: "MassTransit Integration Bus for Cross-Service Messaging"
 sidebarTitle: "Integration Bus"
-description: "Set up MassTransit over RabbitMQ for cross-service integration events, commands, and queries using SharedKernel's MassTransitDependencyInjection and BaseIntegrationEventHandler."
+description: "Wire MassTransit over RabbitMQ for cross-service integration events, commands, and queries with SharedKernel producer buses and consumer base classes."
 ---
 
 In a distributed system built around bounded contexts, services cannot share a database or call each other's internal application layer directly. They communicate through an **integration bus** — a durable message broker that decouples the sender from all consumers. The `JordiAragonZaragoza.SharedKernel.Presentation.Integration` package wires up [MassTransit](https://masstransit.io/) over RabbitMQ as the integration bus. It provides strongly-typed producer buses for publishing events, sending commands, and executing request/response queries across service boundaries, as well as base consumer classes and a dynamic consumer-registration mechanism so each bounded context only subscribes to the messages it cares about.

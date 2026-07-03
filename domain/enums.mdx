@@ -11,7 +11,7 @@ Standard C# `enum` types are little more than named integers. They can be cast f
 `SmartEnum<TEnum>` is an abstract base class that wraps `Ardalis.SmartEnum.SmartEnum<TEnum, int>`, fixing the value type to `int` so every SharedKernel enum is backed by an integer — consistent with standard C# `enum` conventions and efficient for database storage.
 
 ```csharp
-public abstract class SmartEnum<TEnum> : Ardalis.SmartEnum.SmartEnum<TEnum, int>
+public abstract class SmartEnum<TEnum> : Ardalis.SmartEnum.SmartEnum<TEnum>
     where TEnum : Ardalis.SmartEnum.SmartEnum<TEnum, int>
 {
     protected SmartEnum(string name, int value)

@@ -353,7 +353,7 @@ The soft-delete filter defined in `BaseAggregateRootTypeConfiguration` ensures s
 ## Metadata Interfaces and Envelopes
 
 <Accordion title="ISoftDeletable">
-  Marks a persistence entity as capable of being soft-deleted. The interceptor checks for an `IsDeleted` EF shadow property, not this interface directly, but you can implement it on your data entities for explicit control.
+  Marks a persistence entity as capable of being soft-deleted. Note that `ISoftDeletable` exposes a property named `IsDelete`, while the EF shadow property used by the interceptor and `BaseAggregateRootTypeConfiguration` is named `"IsDeleted"` (with a `d` suffix). The interceptor does **not** check for this interface — it checks for the `"IsDeleted"` EF shadow property on each entity type. `AggregateEnvelope` implements `ISoftDeletable` for its `IsDelete` column; the shadow property approach is used directly on aggregate roots configured via `BaseAggregateRootTypeConfiguration`.
 
   ```csharp
   public interface ISoftDeletable

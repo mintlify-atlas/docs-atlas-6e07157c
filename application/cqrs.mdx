@@ -1,7 +1,7 @@
 ---
-title: "CQRS with ICommand and IQuery in SharedKernel"
+title: "CQRS: ICommand, IQuery, and Bus Interfaces in SharedKernel"
 sidebarTitle: "CQRS"
-description: "Define commands and queries using ICommand, IQuery, ICommandBus, and IQueryBus. SharedKernel uses MediatR under the hood with Ardalis.Result return types."
+description: "Build CQRS commands and queries with ICommand, IQuery, ICommandBus, and IQueryBus, using MediatR and Ardalis.Result for consistent, exception-free results."
 ---
 
 SharedKernel implements the Command Query Responsibility Segregation (CQRS) pattern by providing a set of marker interfaces and handler contracts built on top of [MediatR](https://github.com/jbogard/MediatR). Every command and query returns an [Ardalis.Result](https://github.com/ardalis/Result) value, giving callers a consistent, exception-free way to handle success, validation failures, not-found cases, and authorization errors without throwing exceptions across layer boundaries.

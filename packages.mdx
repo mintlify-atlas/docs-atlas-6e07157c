@@ -1,7 +1,7 @@
 ---
-title: "SharedKernel NuGet Packages Reference"
+title: "SharedKernel .NET NuGet Packages Complete Reference"
 sidebarTitle: "Packages"
-description: "All published SharedKernel NuGet packages, their responsibilities, key types, and dependency relationships across Domain, Application, Infrastructure, and Presentation layers."
+description: "All SharedKernel NuGet packages by Clean Architecture layer, with key exported types for Domain, Application, Infrastructure, and Presentation."
 ---
 
 SharedKernel is published as **12 focused NuGet packages** organised by Clean Architecture layer. Each package targets .NET 10 and carries only the dependencies it genuinely needs — you pull in the packages that match the layers you are building, keeping your final binary free from unnecessary transitive dependencies.
@@ -110,13 +110,13 @@ The Application packages wire CQRS abstractions, MediatR pipeline behaviors, int
     | `IQuery<TResponse>` | Query that returns `Result<TResponse>` |
     | `IQueryHandler<TQuery, TResponse>` | MediatR handler for queries |
     | `IQueryBus` | `SendAsync` for dispatching queries |
-    | `IUnitOfWork` | `SaveChangesAsync` unit-of-work abstraction |
+    | `IUnitOfWork` | `ExecuteInTransactionAsync` wraps an operation in a database transaction, committing or rolling back automatically |
     | `ICacheService` | Get/set/remove cache abstraction |
     | `ICacheRequest` / `IInvalidateCacheRequest` | Markers to opt a request into caching behavior |
     | `IUserContextService` | Authenticated user identity and claims |
     | `IIdGenerator` | Deterministic or random ID generation |
     | `IPaginatedQuery` / `PaginatedCollectionOutputDto<T>` | Pagination contracts |
-    | `BaseReadModel` | Base class for EF Core read-model projections |
+    | `BaseReadModel` | Abstract record base class for read-model response DTOs, carrying `Id` and `Version` |
   </Card>
   <Card title="JordiAragonZaragoza.SharedKernel.Application.Contracts.Integration" icon="plug">
     **Cross-service integration messaging contracts.**
@@ -191,7 +191,7 @@ Infrastructure packages contain concrete adapters: the MediatR bus, EF Core cont
 
     | Key type | Purpose |
     |---|---|
-    | `BaseContext` | Base `DbContext` with audit columns and outbox support for domain event dispatch |
+    | `BaseContext` | Base `DbContext` that configures logging, sensitive-data logging, and Ardalis SmartEnum EF Core conventions |
     | `BaseBusinessModelContext` | Specialised context for the write (business model) side |
     | `BaseReadModelContext` | Specialised context for the read-model / projections side |
     | `BaseProjectionsStore` | EF Core store for projection read models |

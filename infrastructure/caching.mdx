@@ -10,7 +10,7 @@ SharedKernel provides a `ICacheService` abstraction with first-class pipeline in
 
 ### `ICacheService`
 
-The central caching abstraction. Register a concrete implementation (backed by `IDistributedCache` or `Microsoft.Extensions.Caching.Hybrid`) before calling `AddSharedKernelInfrastructure`.
+The central caching abstraction. `CacheService` is the built-in implementation registered by `AddSharedKernelInfrastructure`. Its backing store is planned for `Microsoft.Extensions.Caching.Hybrid` but is not yet fully implemented — all methods currently throw `NotImplementedException`. You can substitute your own `ICacheService` implementation before the SharedKernel registration to supply a working cache.
 
 ```csharp
 public interface ICacheService
@@ -182,16 +182,13 @@ services.AddTransient<IRequestCachingService, RequestCachingService>();
 services.AddTransient<IRequestInvalidateCachingService, RequestInvalidateCachingService>();
 ```
 
-`ICacheService` itself is registered by `AddSharedKernelInfrastructure` as `Transient<CacheService>`. **You must register a backing `IDistributedCache` before calling `AddSharedKernelInfrastructure`**, otherwise `CacheService` will have nothing to delegate to:
+`ICacheService` itself is registered by `AddSharedKernelInfrastructure` as `Transient<CacheService>`. The built-in `CacheService` has no external dependencies — its backing store using `Microsoft.Extensions.Caching.Hybrid` is planned but not yet implemented. If you need a functioning cache today, register your own `ICacheService` implementation **before** calling `AddSharedKernelInfrastructure` so that your registration takes precedence:
 
 ```csharp
-// Register a distributed cache implementation first
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = builder.Configuration["Redis:ConnectionString"];
-});
+// Register your own ICacheService implementation first
+builder.Services.AddTransient<ICacheService, MyRedisCacheService>();
 
-// Then register SharedKernel (CacheService depends on IDistributedCache)
+// Then register SharedKernel infrastructure
 builder.Services.AddSharedKernelInfrastructure();
 ```
 
@@ -278,11 +275,7 @@ Write operations (`AddAsync`, `UpdateAsync`, `DeleteAsync`, and their range vari
   </Step>
   <Step title="Register services">
     ```csharp
-    // Distributed cache (required by CacheService)
-    builder.Services.AddStackExchangeRedisCache(options =>
-        options.Configuration = builder.Configuration["Redis:ConnectionString"]);
-
-    // SharedKernel infrastructure (registers CacheService)
+    // SharedKernel infrastructure (registers CacheService as ICacheService)
     builder.Services.AddSharedKernelInfrastructure();
 
     // Application pipeline services (registers RequestCachingService etc.)

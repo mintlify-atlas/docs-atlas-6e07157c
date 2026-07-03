@@ -1,7 +1,7 @@
 ---
-title: "Integration Events and Cross-Service Messaging in SharedKernel"
+title: "Integration Events, Commands, and Queries in SharedKernel"
 sidebarTitle: "Integration Events"
-description: "Publish and consume integration events, commands, and queries across services using IIntegrationEvent, IIntegrationEventBus, IIntegrationCommandBus, and IIntegrationQueryBus."
+description: "Publish and consume cross-service messages using IIntegrationEvent, IIntegrationEventBus, IIntegrationCommandBus, and IIntegrationQueryBus in SharedKernel."
 ---
 
 In a distributed system built with Domain-Driven Design, two kinds of events exist side by side. **Domain events** are in-process notifications raised by aggregates and dispatched inside a single bounded context using MediatR's in-memory notification pipeline. **Integration events** cross those process boundaries — they are part of the *Published Language* that lets bounded contexts communicate without sharing a domain model. SharedKernel provides a thin, transport-agnostic abstraction for publishing and consuming integration messages, with a concrete MassTransit/RabbitMQ implementation available in the Presentation layer.

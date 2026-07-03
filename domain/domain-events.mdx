@@ -134,7 +134,7 @@ public sealed class Order : BaseAggregateRoot<OrderId, Guid>
 ```
 
 <Note>
-Domain events are **collected on the aggregate** in memory and are **not dispatched until after the Unit of Work commits**. `EventsDispatcherService.DispatchEventsFromAggregatesStoreAsync` should be called just before or just after `SaveChanges`, depending on your transactional guarantees. This ensures that handlers only fire when the state change is durable.
+Domain events are **collected on the aggregate** in memory and are **not dispatched until the Unit of Work flushes them**. `EventsDispatcherService.DispatchEventsFromAggregatesStoreAsync` should be called just before committing the transaction (before `SaveChanges`) so that domain event handlers participate in the same transaction and changes are rolled back atomically on failure.
 </Note>
 
 ---
@@ -185,27 +185,48 @@ public interface IEventBus
 
 ## Domain event handlers
 
-Handlers implement `IBaseEventHandler<TEvent>` from the Application contracts package:
+Extend the abstract `BaseEventHandler<TEvent>` class provided by SharedKernel. It implements `IInMemoryEventHandler<TEvent>`, which in turn extends both `IBaseEventHandler<TEvent>` (the common handler contract) and MediatR's `INotificationHandler<TEvent>`:
 
 ```csharp
+// SharedKernel base class — extend this in your application layer
+public abstract class BaseEventHandler<TEvent> : IInMemoryEventHandler<TEvent>
+    where TEvent : IEvent
+{
+    public Task Handle(TEvent notification, CancellationToken cancellationToken)
+        => this.HandleAsync(notification, cancellationToken);
+
+    public abstract Task HandleAsync(TEvent @event, CancellationToken cancellationToken);
+}
+```
+
+The underlying interface contracts:
+
+```csharp
+// Common handler contract (Application.Contracts)
 public interface IBaseEventHandler<in TEvent>
     where TEvent : IEvent
 {
     Task HandleAsync(TEvent @event, CancellationToken cancellationToken);
+}
+
+// In-memory handler — also wires up MediatR INotificationHandler
+public interface IInMemoryEventHandler<in TEvent> : IBaseEventHandler<TEvent>, INotificationHandler<TEvent>
+    where TEvent : IEvent
+{
 }
 ```
 
 ### Example handler
 
 ```csharp
-public sealed class OrderCreatedEventHandler : IBaseEventHandler<OrderCreatedEvent>
+public sealed class OrderCreatedEventHandler : BaseEventHandler<OrderCreatedEvent>
 {
     private readonly IEmailService emailService;
 
     public OrderCreatedEventHandler(IEmailService emailService)
         => this.emailService = emailService;
 
-    public async Task HandleAsync(
+    public override async Task HandleAsync(
         OrderCreatedEvent @event,
         CancellationToken cancellationToken)
     {
@@ -223,7 +244,7 @@ public sealed class OrderCreatedEventHandler : IBaseEventHandler<OrderCreatedEve
     A public method (e.g. `Order.Create`) calls `Apply(new OrderCreatedEvent(...))`. The event is stored in the aggregate's internal list.
   </Step>
   <Step title="Unit of Work dispatches events">
-    Before or after `SaveChanges`, your infrastructure calls `EventsDispatcherService.DispatchEventsFromAggregatesStoreAsync`. Unpublished events are published via `IEventBus` in chronological order.
+    Just before `SaveChanges`, your infrastructure calls `EventsDispatcherService.DispatchEventsFromAggregatesStoreAsync`. Unpublished events are published via `IEventBus` in chronological order.
   </Step>
   <Step title="Handler processes the event">
     `OrderCreatedEventHandler.HandleAsync` runs, performing the side effect (email, read-model update, etc.) without any knowledge of the aggregate that raised the event.

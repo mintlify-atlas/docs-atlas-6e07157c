@@ -1,7 +1,7 @@
 ---
-title: "MediatR Pipeline Behaviors in SharedKernel"
+title: "Request Pipeline Behaviors and Services in SharedKernel"
 sidebarTitle: "Pipelines"
-description: "SharedKernel registers eight MediatR pipeline behaviors for validation, authorization, caching, logging, performance tracking, exception handling, and unit of work management."
+description: "Eight MediatR pipeline behaviors in SharedKernel cover validation, authorization, caching, logging, performance tracking, and transaction management."
 ---
 
 Pipeline behaviors are MediatR's equivalent of middleware: each behavior wraps the next handler in the chain, forming an ordered pipeline that applies cross-cutting concerns — such as logging, validation, and transaction management — to every command or query without polluting individual handler implementations. SharedKernel provides eight purpose-built pipeline services and registers them automatically via two extension methods on `IServiceCollection`.
@@ -31,13 +31,17 @@ You still need to register MediatR itself (e.g., `services.AddMediatR(...)`) and
 ## Pipeline Services
 
 <Accordion title="1. RequestLoggerService — structured request logging">
+  **Interface:** `IRequestLoggerService`  
   **Class:** `RequestLoggerService`
 
   Logs every incoming request at `Debug` level before it reaches the handler. The log entry includes the request type name, the current user ID (from `IUserContextService`), and the serialized request body. If the request implements `ISanitizableRequest`, the sanitized representation is serialized instead of the raw object.
 
   ```csharp
-  public Task LogRequestAsync<TRequest>(TRequest request, CancellationToken cancellationToken = default)
-      where TRequest : notnull;
+  public interface IRequestLoggerService
+  {
+      Task LogRequestAsync<TRequest>(TRequest request, CancellationToken cancellationToken = default)
+          where TRequest : notnull;
+  }
   ```
 
   **Log output (structured):**
@@ -49,16 +53,20 @@ You still need to register MediatR itself (e.g., `services.AddMediatR(...)`) and
 </Accordion>
 
 <Accordion title="2. RequestExceptionHandlerService — unhandled exception safety net">
+  **Interface:** `IRequestExceptionHandlerService`  
   **Class:** `RequestExceptionHandlerService`
 
   Wraps the rest of the pipeline in a `try/catch`. On any unhandled exception it logs at `Error` level — including the request name, user ID, and sanitized request data — and then re-throws, letting the presentation layer's exception middleware decide on the HTTP status code.
 
   ```csharp
-  public async Task<TResponse> ExecuteWithExceptionHandlingAsync<TRequest, TResponse>(
-      TRequest request,
-      Func<CancellationToken, Task<TResponse>> next,
-      CancellationToken cancellationToken)
-      where TRequest : notnull;
+  public interface IRequestExceptionHandlerService
+  {
+      Task<TResponse> ExecuteWithExceptionHandlingAsync<TRequest, TResponse>(
+          TRequest request,
+          Func<CancellationToken, Task<TResponse>> next,
+          CancellationToken cancellationToken)
+          where TRequest : notnull;
+  }
   ```
 
   **Log output on failure (structured):**
@@ -68,14 +76,18 @@ You still need to register MediatR itself (e.g., `services.AddMediatR(...)`) and
 </Accordion>
 
 <Accordion title="3. RequestValidationService — FluentValidation integration">
+  **Interface:** `IRequestValidationService<TRequest, TResponse>`  
   **Class:** `RequestValidationService<TRequest, TResponse>`
 
   Resolves all registered `IValidator<TRequest>` implementations from the DI container and runs them concurrently. If any validators produce failures, the service returns `Result.Invalid(errors)` (or `Result<T>.Invalid(errors)`) immediately — the handler is never invoked. Validation failures are logged at `Information` level with the full list of broken rules.
 
   ```csharp
-  public async Task<TResponse?> TryValidateAsync(
-      TRequest request,
-      CancellationToken cancellationToken = default);
+  public interface IRequestValidationService<TRequest, TResponse>
+      where TRequest : notnull
+      where TResponse : IResult
+  {
+      Task<TResponse?> TryValidateAsync(TRequest request, CancellationToken cancellationToken = default);
+  }
   ```
 
   Register a validator the standard FluentValidation way:
@@ -96,6 +108,7 @@ You still need to register MediatR itself (e.g., `services.AddMediatR(...)`) and
 </Accordion>
 
 <Accordion title="4. RequestAuthorizationService — attribute-driven authorization">
+  **Interface:** `IRequestAuthorizationService<TRequest, TResponse>`  
   **Class:** `RequestAuthorizationService<TRequest, TResponse>`
 
   Reads `[Authorize]` attributes from the request class and enforces them via `IIdentityService`. Supports both **role-based** and **policy-based** authorization:
@@ -105,9 +118,12 @@ You still need to register MediatR itself (e.g., `services.AddMediatR(...)`) and
   - If the user fails a named policy check, returns `Result.Forbidden()`.
 
   ```csharp
-  public async Task<TResponse?> TryAuthorizeAsync(
-      TRequest request,
-      CancellationToken cancellationToken = default);
+  public interface IRequestAuthorizationService<TRequest, TResponse>
+      where TRequest : notnull
+      where TResponse : IResult
+  {
+      Task<TResponse?> TryAuthorizeAsync(TRequest request, CancellationToken cancellationToken = default);
+  }
   ```
 
   The `[Authorize]` attribute:
@@ -137,17 +153,21 @@ You still need to register MediatR itself (e.g., `services.AddMediatR(...)`) and
 </Accordion>
 
 <Accordion title="5. RequestCachingService — response caching">
+  **Interface:** `IRequestCachingService`  
   **Class:** `RequestCachingService`
 
   Activated only for requests that implement `ICacheRequest`. On the first call the handler executes and the result is stored in `ICacheService`. Subsequent calls with the same cache key return the cached value directly, bypassing the handler entirely.
 
   ```csharp
-  public async Task<TResponse> HandleWithCacheAsync<TRequest, TResponse>(
-      TRequest request,
-      Func<CancellationToken, Task<TResponse>> next,
-      CancellationToken cancellationToken)
-      where TRequest : ICacheRequest
-      where TResponse : notnull;
+  public interface IRequestCachingService
+  {
+      Task<TResponse> HandleWithCacheAsync<TRequest, TResponse>(
+          TRequest request,
+          Func<CancellationToken, Task<TResponse>> next,
+          CancellationToken cancellationToken)
+              where TRequest : ICacheRequest
+              where TResponse : notnull;
+  }
   ```
 
   **`ICacheRequest` contract:**
@@ -173,17 +193,21 @@ You still need to register MediatR itself (e.g., `services.AddMediatR(...)`) and
 </Accordion>
 
 <Accordion title="6. RequestInvalidateCachingService — cache invalidation">
+  **Interface:** `IRequestInvalidateCachingService`  
   **Class:** `RequestInvalidateCachingService`
 
   Activated only for requests that implement `IInvalidateCacheRequest`. After the handler runs successfully, all cache entries whose key starts with the given prefix are removed via `ICacheService.RemoveByPrefixAsync`.
 
   ```csharp
-  public async Task<TResponse> HandleAndInvalidateCacheAsync<TRequest, TResponse>(
-      TRequest request,
-      Func<CancellationToken, Task<TResponse>> next,
-      CancellationToken cancellationToken)
-      where TRequest : IInvalidateCacheRequest
-      where TResponse : notnull;
+  public interface IRequestInvalidateCachingService
+  {
+      Task<TResponse> HandleAndInvalidateCacheAsync<TRequest, TResponse>(
+          TRequest request,
+          Func<CancellationToken, Task<TResponse>> next,
+          CancellationToken cancellationToken)
+              where TRequest : IInvalidateCacheRequest
+              where TResponse : notnull;
+  }
   ```
 
   **`IInvalidateCacheRequest` contract:**
@@ -209,6 +233,7 @@ You still need to register MediatR itself (e.g., `services.AddMediatR(...)`) and
 </Accordion>
 
 <Accordion title="7. RequestUnitOfWorkService — transactional command execution">
+  **Interface:** `IRequestUnitOfWorkService`  
   **Class:** `RequestUnitOfWorkService`
 
   Wraps command handlers that implement `ITransactionalCommand` (i.e., those using `ICommand` or `ICommand<TResponse>`) in a database transaction via `IUnitOfWork.ExecuteInTransactionAsync`. The service also translates two domain exceptions into typed `Result` values so they never surface as HTTP 500 errors:
@@ -217,10 +242,13 @@ You still need to register MediatR itself (e.g., `services.AddMediatR(...)`) and
   - `BusinessRuleValidationException` → `Result.Invalid(...)`
 
   ```csharp
-  public async Task<TResponse> HandleWithTransactionAsync<TResponse>(
-      Func<CancellationToken, Task<TResponse>> next,
-      CancellationToken cancellationToken = default)
-      where TResponse : IResult;
+  public interface IRequestUnitOfWorkService
+  {
+      Task<TResponse> HandleWithTransactionAsync<TResponse>(
+          Func<CancellationToken, Task<TResponse>> next,
+          CancellationToken cancellationToken = default)
+          where TResponse : IResult;
+  }
   ```
 
   The `IUnitOfWork` interface it delegates to:
@@ -241,16 +269,20 @@ You still need to register MediatR itself (e.g., `services.AddMediatR(...)`) and
 </Accordion>
 
 <Accordion title="8. RequestPerformanceTrackingService — slow-request detection">
+  **Interface:** `IRequestPerformanceTrackingService`  
   **Class:** `RequestPerformanceTrackingService`
 
   Times every request with a `Stopwatch`. After the handler completes it logs at `Debug` level with elapsed milliseconds, request name, user ID, and both the sanitized request and response values. If execution exceeds **1 500 ms** it additionally logs a `Warning` so slow endpoints are immediately visible in your observability tooling.
 
   ```csharp
-  public async Task<TResponse> TrackPerformanceAsync<TRequest, TResponse>(
-      TRequest request,
-      Func<CancellationToken, Task<TResponse>> next,
-      CancellationToken cancellationToken)
-      where TRequest : notnull;
+  public interface IRequestPerformanceTrackingService
+  {
+      Task<TResponse> TrackPerformanceAsync<TRequest, TResponse>(
+          TRequest request,
+          Func<CancellationToken, Task<TResponse>> next,
+          CancellationToken cancellationToken)
+          where TRequest : notnull;
+  }
   ```
 
   **Warning log (structured):**
